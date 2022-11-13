@@ -1,0 +1,179 @@
+//GongSunink 2022
+
+//使用方法:
+//创建自定义脚本，复制进去
+//设置初始化函数为initEnhance
+//在函数gt_85BAD3D9bngu2N2最后一行调用initAltPanelImageAll
+
+int[15] abilityBtns;
+int[8] altBtns;
+int altDialog;
+bool altDialogFlag;
+string[8] abilityArray;
+bool altinit;
+
+bool abilityCoolDownAlert(bool test_conds, bool run_actions){
+    fixed abilCoolDown;
+    text abilname;
+    string abilId;
+    text message;
+    int abilLevel;
+    int i;
+
+    int ePlayer = UnitGetOwner(getTestPlayerCurrentSelectedUnit());
+    unit heroUnit = getTestPlayerCurrentSelectedUnit();
+ 
+    for (; i < 8 ; i += 1){
+        if (EventDialogControl() == altBtns[i]){
+            abilname = DataTableGetText(true,"heroAbil"+IntToString(i)+IntToString(ePlayer));
+            break;
+        }
+    }
+
+
+    if (abilname != null){
+        abilId = DataTableGetString(true,"heroAbilId"+IntToString(i)+IntToString(ePlayer));
+        message = TextWithColor(PlayerName(ePlayer),
+            libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(ePlayer,false))) + 
+                TextWithColor(StringToText("：技能 ") + abilname + StringToText("("+abilityArray[i]+")"),ColorWithAlpha(0,255,255,255));
+        
+        if (i > 0 && i < 5){
+            if (gv_D0B36B8F[ePlayer][i] == 0){
+                message += StringToText(" <c val = \"ff0000\">未学习</c>");
+            }else{
+                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, ("Abil/" + abilId));
+                message += StringToText("<c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i])+"</c>");
+                if (UnitAbilityCheck(heroUnit,abilId,true)){
+                   
+                    if (abilCoolDown > 0.0){
+                        message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
+                    }else {
+                        message += StringToText(" <c val = \"00ff00\">已就绪</c>");
+                    }
+                }else {
+                    message += StringToText(" <c val = \"ff0000\">蓄力中</c>");
+                }
+            }
+        }else if (i == 0){
+            abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, ("Abil/" + abilId));
+            message += StringToText("<c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i] + 1)+"</c>");
+            if (abilCoolDown > 0.0){
+                message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
+            }else {
+                message += StringToText("<c val = \"00ff00\">已就绪</c>");   
+            }
+        }else {
+            //闪现
+            if (abilId == "dbnu_spell_1_0") {
+                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId,"Abil/dbno_spell_1_0");
+            }else {
+                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, ("Abil/" + abilId));
+            }
+
+            if (abilCoolDown > 0.0){
+                message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
+            }else {
+                message += StringToText(" <c val = \"00ff00\">已就绪</c>"); 
+            }
+        }
+
+        UIDisplayMessage(gv_12BC5A6E[FixedToInt(ePlayer / 5)],c_messageAreaChat,message);
+    }
+    return true;
+}
+
+void initAltBtn0(int player, int column, int row){
+    string sHeroId = gf_45491ABD(gv_131E8983[player]);
+    playergroup p = PlayerGroupSingle(player);
+    string[3][4] DFGArray;
+
+    if (column < 5){
+        DataTableSetText(true,"heroAbil"+IntToString(column)+IntToString(player),StringExternal(("Button/Name/dbbu" + sHeroId + "_" + IntToString((row + 1)) + "_" + IntToString(column)+abilityArray[column])));
+        DataTableSetString(true,"heroAbilId"+IntToString(column)+IntToString(player),"dbnu" + sHeroId + "_" + IntToString((row + 1)) + "_" + IntToString(column)+abilityArray[column]);
+    } else {
+        DataTableSetText(true,"heroAbil"+IntToString(column)+IntToString(player),StringExternal("Button/Name/btn_spell_" + IntToString(column - 5)+"_" + IntToString(row)));
+        DataTableSetString(true,"heroAbilId"+IntToString(column)+IntToString(player),"dbnu_spell_" + IntToString(column - 5)+"_"+IntToString(row));
+    }
+
+
+    libNtve_gf_SetDialogItemImage(altBtns[column],"GamesUis\\MyG_BTN_Alpha.dds", p);
+    libNtve_gf_SetDialogItemImage2(altBtns[column],"GamesUis\\MyG_BTN_Alpha.dds", p);
+    
+}
+
+void initAltPanel0(int player){
+    int i;
+
+    for (; i < 5 ; i += 1){
+        initAltBtn0(player,i,gv_BB156610.lv_0195430E[player][i]);
+    }
+
+    for (i = 5; i < 8 ; i += 1){
+        initAltBtn0(player,i,gv_BB156610.lv_B91E5FDF[player][i - 5]);
+    }
+}
+
+void initAltPanelImageAll(){
+    int i;
+    
+    for (i = 1; i < 11 ; i += 1){
+        initAltPanel0(i);
+    }
+}
+
+bool altPanelShow(bool test_conds, bool run_actions){
+    if (gv_65C11E79 == 13){
+        if (!altinit){
+            initAltPanelImageAll();
+            altinit = true;
+        }
+        DialogSetVisible(altDialog,PlayerGroupAll(),!altDialogFlag);
+        altDialogFlag = !altDialogFlag;
+    }
+    
+    return true;
+}
+
+void initEnhance(){
+    int i;
+    int len = 44;
+    trigger t = TriggerCreate("abilityCoolDownAlert");
+
+    abilityArray[0] = "t";
+    abilityArray[1] = "q";
+    abilityArray[2] = "w";
+    abilityArray[3] = "e";
+    abilityArray[4] = "r";
+    abilityArray[5] = "辅助技能";
+    abilityArray[6] = "辅助技能";
+    abilityArray[7] = "辅助技能";
+
+    //5-12
+    for (i = 5; i < 10 ; i += 1){
+        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton0"+IntToString(i)); 
+    }
+    for (i = 10; i < 13 ; i += 1){
+        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton"+IntToString(i));
+    }
+
+    DialogCreate(480, 148, c_anchorBottom, 0, 4, true);
+    DialogSetImageVisible(DialogLastCreated(), false);
+    altDialog = DialogLastCreated();
+
+    for (i = 0 ; i < 8 ; i += 1){
+        if (i < 1 || i > 4){
+            len = 44;
+        }else {
+            len = 60;
+        }
+        DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
+        DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),len,len);
+        DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,abilityBtns[i + 5],c_anchorCenter,0,0);
+        TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
+        altBtns[i] = DialogControlLastCreated();
+    }
+
+    TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,false,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+
+}
