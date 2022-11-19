@@ -8,12 +8,12 @@
 int[15] abilityBtns;
 int[8] altBtns;
 int altDialog;
-bool altDialogFlag;
+bool[10] altDialogFlag;
 string[8] abilityArray;
-bool altinit;
+bool altInit;
 
 bool abilityCoolDownAlert(bool test_conds, bool run_actions){
-    fixed abilCoolDown;
+    int abilCoolDown;
     text abilname;
     string abilId;
     text message;
@@ -50,14 +50,21 @@ bool abilityCoolDownAlert(bool test_conds, bool run_actions){
             libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(ePlayer,false))) + 
                 TextWithColor(StringToText("：技能 ") + abilname + StringToText("("+abilityArray[i]+")"),ColorWithAlpha(0,255,255,255));
         
-        if (i > 0 && i < 5){
+        //闪现
+        if (abilId == "dbnu_spell_1_0") {
+            abilCoolDown =  FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId,"Abil/dbno_spell_1_0") / 1.4));
+        }else {
+            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId, "Abil/" + abilId) / 1.4));
+        }
+        
+
+        if (i < 5){
             if (gv_D0B36B8F[ePlayer][i] == 0){
                 message += StringToText(" <c val = \"ff0000\">未学习</c>");
             }else{
-                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, "Abil/" + abilId);
-                message += StringToText("<c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i])+"</c>");
-                if (abilCoolDown > 0.0){
-                    message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
+                message += StringToText(" <c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i])+"</c>");
+                if (abilCoolDown > 0){
+                    message += StringToText(" <c val = \"ff0000\">冷却中("+IntToString(abilCoolDown)+"秒后就绪)</c>");
                 }else {
                     if (UnitAbilityCheck(heroUnit,abilId,false)){
                         message += StringToText(" <c val = \"ff0000\">准备中</c>");
@@ -65,43 +72,26 @@ bool abilityCoolDownAlert(bool test_conds, bool run_actions){
                     message += StringToText(" <c val = \"00ff00\">已就绪</c>");
                 }
             }
-        }else if (i == 0){
-            abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, ("Abil/" + abilId));
-            message += StringToText("<c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i] + 1)+"</c>");
-            if (abilCoolDown > 0.0){
-                message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
-            }else {
-                message += StringToText("<c val = \"00ff00\">已就绪</c>");   
-            }
         }else {
-            //闪现
-            if (abilId == "dbnu_spell_1_0") {
-                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId,"Abil/dbno_spell_1_0");
-            }else {
-                abilCoolDown = UnitAbilityGetCooldown(heroUnit, abilId, ("Abil/" + abilId));
-            }
-
-            if (abilCoolDown > 0.0){
-                message += StringToText(" <c val = \"ff0000\">冷却中("+FixedToString(abilCoolDown,2)+")</c>");
+            if (abilCoolDown > 0){
+                message += StringToText(" <c val = \"ff0000\">冷却中("+IntToString(abilCoolDown)+"秒后就绪)</c>");
             }else {
                 message += StringToText(" <c val = \"00ff00\">已就绪</c>"); 
             }
         }
 
-        UIDisplayMessage(gv_12BC5A6E[FixedToInt(ePlayer / 5)],c_messageAreaChat,message);
+        if (PlayerGroupHasPlayer(gv_12BC5A6E[0],ePlayer)){
+            UIDisplayMessage(gv_12BC5A6E[0],c_messageAreaChat,message);
+        }else{
+            UIDisplayMessage(gv_12BC5A6E[1],c_messageAreaChat,message);
+        }
     }
     return true;
 }
 
-bool altPanelShow(bool test_conds, bool run_actions){
-    DialogSetVisible(altDialog,PlayerGroupAll(),!altDialogFlag);
-    altDialogFlag = !altDialogFlag;
-    return true;
-}
-
-void initEnhance(){
+void altPanelInit(){
     int i;
-    int len = 44;
+    int size = 44;
     trigger t = TriggerCreate("abilityCoolDownAlert");
 
     abilityArray[0] = "t";
@@ -127,12 +117,12 @@ void initEnhance(){
 
     for (i = 0 ; i < 8 ; i += 1){
         if (i < 1 || i > 4){
-            len = 44;
+            size = 44;
         }else {
-            len = 60;
+            size = 60;
         }
         DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
-        DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),len,len);
+        DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),size,size);
         DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,abilityBtns[i + 5],c_anchorCenter,0,0);
         TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
 
@@ -141,8 +131,23 @@ void initEnhance(){
     
         altBtns[i] = DialogControlLastCreated();
     }
+}
 
+bool altPanelShow(bool test_conds, bool run_actions){
+    if (gv_65C11E79 != 13){
+        return true;
+    }
+    if (altDialog == c_invalidDialogId || dialogDestroyFlag){
+        altPanelInit();
+        dialogDestroyFlag = false;
+    }
+
+    DialogSetVisible(altDialog,PlayerGroupSingle(EventPlayer()),!altDialogFlag[EventPlayer()]);
+    altDialogFlag[EventPlayer()] = !altDialogFlag[EventPlayer()];
+    return true;
+}
+
+void initEnhance(){
     TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
     TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,false,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
-
 }
