@@ -1,153 +1,18 @@
 //GongSunink 2022
-
-//使用方法:
-//创建自定义脚本，复制进去
-//设置初始化函数为initEnhance
-//在函数gt_85BAD3D9bngu2N2最后一行调用initAltPanelImageAll
-
-int[15] abilityBtns;
-int[8] altBtns;
-int altDialog;
-bool[10] altDialogFlag;
-string[8] abilityArray;
-bool altInit;
-
-bool abilityCoolDownAlert(bool test_conds, bool run_actions){
-    int abilCoolDown;
-    text abilname;
-    string abilId;
-    text message;
-    int abilLevel;
-    int i;
-    unit heroUnit;
-    string sHeroId;
-
-    int ePlayer = EventPlayer();
-
-    if (ePlayer < 11){
-        heroUnit = gv_71C054E5[ePlayer];
-        sHeroId = gf_45491ABD(gv_131E8983[ePlayer]);
-    }else {
-        return true;
-    }
-
-    for (; i < 8 ; i += 1){
-        if (EventDialogControl() == altBtns[i]){
-            if (i < 5){
-                abilname = StringExternal(("Button/Name/dbbu" + sHeroId + "_" + IntToString((gv_BB156610.lv_0195430E[ePlayer][i] + 1)) + "_" + IntToString(i)+abilityArray[i]));
-                abilId = "dbnu" + sHeroId + "_" + IntToString((gv_BB156610.lv_0195430E[ePlayer][i] + 1)) + "_" + IntToString(i)+abilityArray[i];
-            }else {
-                abilname = StringExternal("Button/Name/btn_spell_" + IntToString(i - 5)+"_" + IntToString(gv_BB156610.lv_B91E5FDF[ePlayer][i - 5]));
-                abilId = "dbnu_spell_" + IntToString(i - 5)+"_"+IntToString(gv_BB156610.lv_B91E5FDF[ePlayer][i - 5]);
-            }
-            break;
-        }
-    }
-
-
-    if (abilname != null){
-        message = TextWithColor(PlayerName(ePlayer),
-            libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(ePlayer,false))) + 
-                TextWithColor(StringToText("：技能 ") + abilname + StringToText("("+abilityArray[i]+")"),ColorWithAlpha(0,255,255,255));
-        
-        //闪现
-        if (abilId == "dbnu_spell_1_0") {
-            abilCoolDown =  FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId,"Abil/dbno_spell_1_0") / 1.4));
-        }else {
-            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId, "Abil/" + abilId) / 1.4));
-        }
-        
-
-        if (i < 5){
-            if (gv_D0B36B8F[ePlayer][i] == 0){
-                message += StringToText(" <c val = \"ff0000\">未学习</c>");
-            }else{
-                message += StringToText(" <c val= \"00ffff\"> 等级"+IntToString(gv_D0B36B8F[ePlayer][i])+"</c>");
-                if (abilCoolDown > 0){
-                    message += StringToText(" <c val = \"ff0000\">冷却中("+IntToString(abilCoolDown)+"秒后就绪)</c>");
-                }else {
-                    if (UnitAbilityCheck(heroUnit,abilId,false)){
-                        message += StringToText(" <c val = \"ff0000\">准备中</c>");
-                    }
-                    message += StringToText(" <c val = \"00ff00\">已就绪</c>");
-                }
-            }
-        }else {
-            if (abilCoolDown > 0){
-                message += StringToText(" <c val = \"ff0000\">冷却中("+IntToString(abilCoolDown)+"秒后就绪)</c>");
-            }else {
-                message += StringToText(" <c val = \"00ff00\">已就绪</c>"); 
-            }
-        }
-
-        if (PlayerGroupHasPlayer(gv_12BC5A6E[0],ePlayer)){
-            UIDisplayMessage(gv_12BC5A6E[0],c_messageAreaChat,message);
-        }else{
-            UIDisplayMessage(gv_12BC5A6E[1],c_messageAreaChat,message);
-        }
-    }
-    return true;
-}
-
-void altPanelInit(){
-    int i;
-    int size = 44;
-    trigger t = TriggerCreate("abilityCoolDownAlert");
-
-    abilityArray[0] = "t";
-    abilityArray[1] = "q";
-    abilityArray[2] = "w";
-    abilityArray[3] = "e";
-    abilityArray[4] = "r";
-    abilityArray[5] = "辅助技能";
-    abilityArray[6] = "辅助技能";
-    abilityArray[7] = "辅助技能";
-
-    //5-12
-    for (i = 5; i < 10 ; i += 1){
-        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton0"+IntToString(i)); 
-    }
-    for (i = 10; i < 13 ; i += 1){
-        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton"+IntToString(i));
-    }
-
-    DialogCreate(480, 148, c_anchorBottom, 0, 4, true);
-    DialogSetImageVisible(DialogLastCreated(), false);
-    altDialog = DialogLastCreated();
-
-    for (i = 0 ; i < 8 ; i += 1){
-        if (i < 1 || i > 4){
-            size = 44;
-        }else {
-            size = 60;
-        }
-        DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
-        DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),size,size);
-        DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,abilityBtns[i + 5],c_anchorCenter,0,0);
-        TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
-
-        libNtve_gf_SetDialogItemImage(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
-        libNtve_gf_SetDialogItemImage2(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
-    
-        altBtns[i] = DialogControlLastCreated();
-    }
-}
-
-bool altPanelShow(bool test_conds, bool run_actions){
-    if (gv_65C11E79 != 13){
-        return true;
-    }
-    if (altDialog == c_invalidDialogId || dialogDestroyFlag){
-        altPanelInit();
-        dialogDestroyFlag = false;
-    }
-
-    DialogSetVisible(altDialog,PlayerGroupSingle(EventPlayer()),!altDialogFlag[EventPlayer()]);
-    altDialogFlag[EventPlayer()] = !altDialogFlag[EventPlayer()];
-    return true;
-}
-
 void initEnhance(){
-    TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
-    TriggerAddEventKeyPressed(TriggerCreate("altPanelShow"),c_playerAny,c_keyAlt,false,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+
+    trigger tg_altPanelShow = TriggerCreate("altPanelShow");
+    trigger tg_smartCast = TriggerCreate("smartCaster");
+    trigger tg_mousePosListener = TriggerCreate("mousePosListener");
+
+    TriggerAddEventKeyPressed(tg_altPanelShow,c_playerAny,c_keyAlt,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    TriggerAddEventKeyPressed(tg_altPanelShow,c_playerAny,c_keyAlt,false,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+
+    // TriggerAddEventKeyPressed(tg_smartCast,c_playerAny,c_keyQ,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    // TriggerAddEventKeyPressed(tg_smartCast,c_playerAny,c_keyW,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    // TriggerAddEventKeyPressed(tg_smartCast,c_playerAny,c_keyE,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    // TriggerAddEventKeyPressed(tg_smartCast,c_playerAny,c_keyR,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+    // TriggerAddEventKeyPressed(tg_smartCast,c_playerAny,c_keyT,true,c_keyModifierStateIgnore,c_keyModifierStateIgnore,c_keyModifierStateIgnore);
+
+    // TriggerAddEventMouseMoved(tg_mousePosListener,c_playerAny);
 }

@@ -1,0 +1,216 @@
+//GongSunink 2022
+int[15] abilityBtns;
+int[10] altBtns;
+int altDialog;
+string[8] abilityArray;
+
+fixed[10] playerLastSendTime;
+int[10] playerSendTimes;
+
+fixed altAlertCoolDownTime = 5.0;
+
+text StringExternalAltPanel(string name){
+    return StringExternal("DOCSTR_altpanel_"+name);
+}
+
+bool STRStartWith(string s, string s1){
+    return StringSub(s,1,StringLength(s1)) == s1;
+}
+
+bool AltAlert(bool test_conds, bool run_actions){
+    int abilCoolDown;
+    text abilname;
+    string abilId;
+    fixed temp;
+
+    text message;
+    unit heroUnit;
+    string sHeroId;
+
+    int i;
+    
+    int ePlayer = EventPlayer();
+
+    if (ePlayer > 11 || ePlayer < 1){
+        return true;
+    }
+
+    if ((GameGetMissionTime() - playerLastSendTime[ePlayer - 1] > altAlertCoolDownTime)){
+        playerSendTimes[ePlayer - 1] = 0;
+    }
+
+    if ((playerSendTimes[ePlayer - 1] > 2) && (GameGetMissionTime() - playerLastSendTime[ePlayer - 1] < altAlertCoolDownTime)){
+        UIDisplayMessage(PlayerGroupSingle(ePlayer),c_messageAreaChat,StringExternalAltPanel("alert_cooldown"));
+        return true;
+    }
+
+    playerSendTimes[ePlayer - 1] += 1;
+    playerLastSendTime[ePlayer - 1] = GameGetMissionTime();
+
+    heroUnit = gv_71C054E5[ePlayer];
+    sHeroId = gf_45491ABD(gv_131E8983[ePlayer]);
+    message = TextWithColor(PlayerName(ePlayer),
+        libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(ePlayer,false))) + StringExternalAltPanel("const_sp_char");
+
+    for (; i < 10 ; i += 1){
+        if (EventDialogControl() == altBtns[i]){
+            if (i < 5){
+                abilname = StringExternal(("Button/Name/dbbu" + sHeroId + "_" + IntToString((gv_BB156610.lv_0195430E[ePlayer][i] + 1)) + "_" + IntToString(i)+abilityArray[i]));
+                abilId = "dbnu" + sHeroId + "_" + IntToString((gv_BB156610.lv_0195430E[ePlayer][i] + 1)) + "_" + IntToString(i)+abilityArray[i];
+            }else if (i < 8){
+                abilname = StringExternal("Button/Name/btn_spell_" + IntToString(i - 5)+"_" + IntToString(gv_BB156610.lv_B91E5FDF[ePlayer][i - 5]));
+                abilId = "dbnu_spell_" + IntToString(i - 5)+"_"+IntToString(gv_BB156610.lv_B91E5FDF[ePlayer][i - 5]);
+            }
+            break;
+        }
+    }
+
+    if (abilname != null){
+        message += TextWithColor(StringExternalAltPanel("abil") + abilname + StringToText("("+abilityArray[i]+")"),ColorWithAlpha(0,255,255,255));
+        
+        if (abilId == "dbnu_spell_1_0") {
+            //闪现
+            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId,"Abil/dbno_spell_1_0") / 1.4));
+        }else if (abilId == "dbnu_spell_0_2"){
+            //净化
+            abilCoolDown = FixedToInt(Ceiling(PlayerGetCooldown(ePlayer,"Abil/" + abilId) / 1.4));
+        }else if (abilId == "dbnu_spell_2_3"){
+            //真视
+            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId,"Abil/ScannerSweep") / 1.4));
+        }else if (abilId == "dbnu_spell_2_2"){
+            //立场 充能冷却linkid为 Abil/dbnu_spell_2_0 fuck
+            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetChargeRegen(heroUnit, abilId, "Abil/" + "dbnu_spell_2_0")) / 1.4);
+        }else {
+            abilCoolDown = FixedToInt(Ceiling(UnitAbilityGetCooldown(heroUnit, abilId, "Abil/" + abilId) / 1.4));
+        }
+
+        if (i < 5){
+            if (gv_D0B36B8F[ePlayer][i] == 0){
+                message += StringExternalAltPanel("abil_not_learned");
+            }else{
+                message += StringExternalAltPanel("level")+TextWithColor(IntToText(gv_D0B36B8F[ePlayer][i]),ColorWithAlpha(0,255,255,255));
+                if (abilCoolDown > 0){
+                    message += StringExternalAltPanel("abil_cooldown_a")+IntToText(abilCoolDown)+StringExternalAltPanel("abil_cooldown_b");
+                }else {
+                    temp = StringToFixed(CatalogFieldValueGet(c_gameCatalogAbil,abilId,"Cost[0].Vital[Energy]",ePlayer));
+                    //蓝量判断
+                    if (UnitGetPropertyFixed(heroUnit,c_unitPropEnergy,true) < temp){
+                        message += StringExternalAltPanel("mana_insufficient_a") + 
+                        IntToText(FixedToInt(Ceiling(temp - UnitGetPropertyFixed(heroUnit,c_unitPropEnergy,true)))) +
+                        StringExternalAltPanel("mana_insufficient_b");
+                    }else {
+                        message += StringExternalAltPanel("abil_ready");
+                    }
+                }
+            }
+        }else {
+            if (abilCoolDown > 0){
+                message += StringExternalAltPanel("abil_cooldown_a")+IntToText(abilCoolDown)+StringExternalAltPanel("abil_cooldown_b");
+            }else {
+                message += StringExternalAltPanel("abil_ready");
+            }
+        }
+    }else {
+        //血条&能量条
+        if (i == 8){
+            message += StringExternalAltPanel("hp_alert") + IntToText(UnitGetPropertyInt(heroUnit,c_unitPropLife,true)) + 
+                StringExternalAltPanel("bracket_start") + IntToText(FixedToInt(Floor(UnitGetPropertyFixed(heroUnit,c_unitPropLifePercent,true)))) + 
+                StringExternalAltPanel("const_percent_char") + StringExternalAltPanel("brackets_end");
+            if (UnitGetPropertyInt(heroUnit,c_unitPropShields,true) > 0){
+                message += StringExternalAltPanel("shield_alert") + IntToText(UnitGetPropertyInt(heroUnit,c_unitPropShields,true))+ 
+                    StringExternalAltPanel("bracket_start") + IntToText(FixedToInt(Floor(UnitGetPropertyFixed(heroUnit,c_unitPropShieldsPercent,true)))) +
+                    StringExternalAltPanel("const_percent_char") + StringExternalAltPanel("brackets_end");
+            }
+        }else {
+            message += StringExternalAltPanel("mana_alert") + IntToText(UnitGetPropertyInt(heroUnit,c_unitPropEnergy,true)) + 
+                StringExternalAltPanel("bracket_start") + IntToText(FixedToInt(Floor(UnitGetPropertyFixed(heroUnit,c_unitPropEnergyPercent,true)))) + 
+                StringExternalAltPanel("const_percent_char") + StringExternalAltPanel("brackets_end");
+        }
+    }
+
+    if (PlayerGroupHasPlayer(gv_12BC5A6E[0],ePlayer)){
+        UIDisplayMessage(gv_12BC5A6E[0],c_messageAreaChat,message);
+    }else{
+        UIDisplayMessage(gv_12BC5A6E[1],c_messageAreaChat,message);
+    }
+    return true;
+}
+
+void altPanelInit(){
+    int i;
+    int size = 44;
+    trigger t = TriggerCreate("AltAlert");
+
+    abilityArray[0] = "t";
+    abilityArray[1] = "q";
+    abilityArray[2] = "w";
+    abilityArray[3] = "e";
+    abilityArray[4] = "r";
+    abilityArray[5] = TextToString(StringExternalAltPanel("aidabil"));
+    abilityArray[6] = TextToString(StringExternalAltPanel("aidabil"));
+    abilityArray[7] = TextToString(StringExternalAltPanel("aidabil"));
+
+    //5-12
+    for (i = 5; i < 10 ; i += 1){
+        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton0"+IntToString(i)); 
+    }
+    for (i = 10; i < 13 ; i += 1){
+        abilityBtns[i] = DialogControlHookupStandard(c_triggerControlTypeButton,"UIContainer/ConsoleUIContainer/CommandPanel/CommandButton"+IntToString(i));
+    }
+
+    DialogCreate(480, 148, c_anchorBottom, 0, 4, true);
+    DialogSetImageVisible(DialogLastCreated(), false);
+    
+    altDialog = DialogLastCreated();
+
+    for (i = 0 ; i < 8 ; i += 1){
+        if (i < 1 || i > 4){
+            size = 44;
+        }else {
+            size = 60;
+        }
+        DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
+        DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),size,size);
+        DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,abilityBtns[i + 5],c_anchorCenter,0,0);
+        TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
+
+        libNtve_gf_SetDialogItemImage(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+        libNtve_gf_SetDialogItemImage2(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+        altBtns[i] = DialogControlLastCreated();
+    }
+
+    //hp
+    DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
+    DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),446,20);
+    DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,gv_5C4043F8.lv_24D62004,c_anchorCenter,0,0);
+    libNtve_gf_SetDialogItemImage(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+    libNtve_gf_SetDialogItemImage2(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+    TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
+    altBtns[8] = DialogControlLastCreated();
+    //mp
+    DialogControlCreate(DialogLastCreated(),c_triggerControlTypeButton);
+    DialogControlSetSize(DialogControlLastCreated(),PlayerGroupAll(),446,20);
+    DialogControlSetPositionRelative(DialogControlLastCreated(),PlayerGroupAll(),c_anchorCenter,gv_5C4043F8.lv_D9B13017,c_anchorCenter,0,0);
+    libNtve_gf_SetDialogItemImage(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+    libNtve_gf_SetDialogItemImage2(DialogControlLastCreated(),"GamesUis\\MyG_BTN_Alpha.dds", PlayerGroupAll());
+    TriggerAddEventDialogControl(t,c_playerAny,DialogControlLastCreated(),c_triggerControlEventTypeClick);
+    altBtns[9] = DialogControlLastCreated();
+
+    DialogSetVisible(DialogLastCreated(),PlayerGroupAll(),false);
+
+}
+
+bool altPanelShow(bool test_conds, bool run_actions){
+    if (gv_65C11E79 != 13){
+        return true;
+    }
+    if (EventPlayer() > 11 || EventPlayer() < 1){
+        return true;
+    }
+    if (altDialog == c_invalidDialogId || dialogDestroyFlag){
+        altPanelInit();
+        dialogDestroyFlag = false;
+    }
+    DialogSetVisible(altDialog,PlayerGroupSingle(EventPlayer()),!DialogIsVisible(altDialog,EventPlayer()));
+    return true;
+}

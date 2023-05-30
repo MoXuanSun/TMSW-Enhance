@@ -1,0 +1,27 @@
+//GongSunink 2022
+fixed[10][3] playerMousePosWorld;
+
+bool smartCaster(bool test_conds, bool run_actions){
+    
+    
+    showMsg(1,"test");
+       
+
+
+
+    UnitIssueOrder(gv_71C054E5[ePlayer],OrderTargetingPoint(AbilityCommand("dbnu01_1_1q",5)),c_orderQueueReplace);
+
+
+    return true;
+}
+
+bool mousePosListener(bool test_conds, bool run_actions){
+    
+
+    playerMousePosWorld[EventPlayer() - 1][0] = EventMouseMovedPosXWorld();
+    playerMousePosWorld[EventPlayer() - 1][1] = EventMouseMovedPosYWorld();
+    playerMousePosWorld[EventPlayer() - 1][2] = EventMouseMovedPosZWorld();
+    
+
+    return true;
+}
